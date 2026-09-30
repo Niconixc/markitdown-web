@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: markitdown-web
+    env: docker
+    dockerfilePath: ./Dockerfile.web
+    plan: free
+    autoDeploy: true
