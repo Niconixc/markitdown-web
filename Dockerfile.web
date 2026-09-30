@@ -11,6 +11,7 @@ FROM python:3.11-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
 ENV EXIFTOOL_PATH=/usr/bin/exiftool
 ENV FFMPEG_PATH=/usr/bin/ffmpeg
 

@@ -1,34 +1,43 @@
-FROM python:3.13-slim-trixie
+# Stage 1: Build Frontend
+FROM node:20-slim AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ ./
+RUN npm run build
+
+# Stage 2: Runtime Backend
+FROM python:3.11-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
 ENV EXIFTOOL_PATH=/usr/bin/exiftool
 ENV FFMPEG_PATH=/usr/bin/ffmpeg
-ENV ORT_DISABLE_TELEMETRY=1
 
-# Runtime dependency
+# Install runtime dependencies for audio transcription, exiftool, etc.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
-    libimage-exiftool-perl
-
-ARG INSTALL_GIT=false
-RUN if [ "$INSTALL_GIT" = "true" ]; then \
-    apt-get install -y --no-install-recommends \
-    git; \
-    fi
-
-# Cleanup
-RUN rm -rf /var/lib/apt/lists/*
+    libimage-exiftool-perl \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY . /app
-RUN pip --no-cache-dir install \
-    /app/packages/markitdown[all] \
-    /app/packages/markitdown-sample-plugin
 
-# Default USERID and GROUPID
-ARG USERID=nobody
-ARG GROUPID=nogroup
+# Install MarkItDown and optional dependencies
+COPY packages /app/packages
+RUN pip install --no-cache-dir /app/packages/markitdown[all]
 
-USER $USERID:$GROUPID
+# Install backend requirements
+COPY backend/requirements.txt /app/backend/requirements.txt
+RUN pip install --no-cache-dir -r /app/backend/requirements.txt
 
-ENTRYPOINT [ "markitdown" ]
+# Copy backend application
+COPY backend /app/backend
+
+# Copy compiled frontend from Stage 1
+COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
+
+ENV PORT=8000
+EXPOSE 8000
+
+CMD ["sh", "-c", "uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

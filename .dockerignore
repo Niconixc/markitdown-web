@@ -1,2 +1,12 @@
-*
-!packages/
+.git
+.github
+.venv
+.tmp
+backend/.tmp
+frontend/node_modules
+frontend/dist
+**/__pycache__
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
